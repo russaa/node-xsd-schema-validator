@@ -24,6 +24,7 @@ import org.xml.sax.SAXParseException;
 public class XMLValidator implements ErrorHandler {
 
   static final String END = "---end---";
+  static final int READ_LENGTH = 256;
 
   private boolean withErrors = false;
 
@@ -42,27 +43,23 @@ public class XMLValidator implements ErrorHandler {
 
   @Override
   public void warning(SAXParseException exception) throws SAXException {
-    println("[warning] " + exception.getMessage());
+    println(String.format("[warning] %s (%d:%d)", exception.getMessage(), exception.getLineNumber(), exception.getColumnNumber()));
 
     withErrors = true;
   }
 
   @Override
   public void error(SAXParseException exception) throws SAXException {
-    println("[error] " + exception.getMessage());
+    println(String.format("[error] %s (%d:%d)", exception.getMessage(), exception.getLineNumber(), exception.getColumnNumber()));
 
     withErrors = true;
   }
 
   @Override
   public void fatalError(SAXParseException exception) throws SAXException {
-    println("[fatal] " + exception.getMessage());
+    println(String.format("[fatal] %s (%d:%d)", exception.getMessage(), exception.getLineNumber(), exception.getColumnNumber()));
 
     withErrors = true;
-  }
-
-  private static boolean isInputEnd(String str) {
-    return str.replaceAll("[\\n\\r]+", "").equals(END);
   }
 
   private static Schema loadSchema(String fileName) throws Exception {
@@ -71,21 +68,50 @@ public class XMLValidator implements ErrorHandler {
 
     return schema;
   }
+  
+  private static boolean endsWith(StringWriter w, String s) throws IOException {
+	
+	StringBuffer b = w.getBuffer();
+	int len  = b.length();
+	int len2 = s.length();
+	if(len >= len2){
+		boolean isMatch = true;
+		int i = len-1;
+		//ignore endings with line-breaks
+		while(b.charAt(i) == '\n' || b.charAt(i) == '\r') --i;
+		
+		for(int j=len2-1; i>=0 && j>=0; --i){
+			if(b.charAt(i) != s.charAt(j)){
+				isMatch = false;
+				break;
+			}
+			--j;
+		}
+		return isMatch;
+	}
+	else 
+		return false;
+  }
 
   private static InputStream readFromSysIn() throws IOException {
 
     BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
     StringWriter writer = new StringWriter();
-
-    while (true) {
-      String line = reader.readLine();
-
-      if (isInputEnd(line)) {
-        break;
-      }
-
-      writer.append(line);
+	
+	char[] buf = new char[READ_LENGTH];
+	int result = 0;
+    while (result != -1) {
+	  
+	  result = reader.read(buf, 0, READ_LENGTH);
+	  
+	  if(result != -1){
+		writer.write(buf, 0, result);
+	  }
+		
+	  if(endsWith(writer, END)){
+		break;
+	  }
     }
 
     return new ByteArrayInputStream(writer.toString().getBytes());
