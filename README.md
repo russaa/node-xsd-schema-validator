@@ -33,6 +33,16 @@ validator.validateXML(xmlStr, 'resources/foo.xsd', function(err, result) {
 });
 ```
 
+or using a file as input:
+
+```
+var validator = require('xsd-schema-validator');
+
+validator.validateXML( {file: 'path/to/xml/file'}, 'resources/foo.xsd', function(err, result) {
+  //...
+});
+```
+
 ## Why
 
 Because Java can do schema validation and NodeJS cannot.
